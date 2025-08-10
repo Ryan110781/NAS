@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAS - 檔案管理員</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .file-manager {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 工具列樣式 */
+        .file-toolbar {
+            background: rgba(248, 249, 250, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #dee2e6;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toolbar-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .toolbar-button.primary {
+            background: #0078d4;
+            box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+        }
+        
+        .toolbar-button.primary:hover {
+            background: #106ebe;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 120, 212, 0.4);
+        }
+        
+        .toolbar-button.secondary {
+            background: #6c757d;
+            box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
+        }
+        
+        .toolbar-button.secondary:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+        
+        .toolbar-button.success {
+            background: #28a745;
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+        }
+        
+        .toolbar-button.success:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+        
+        .toolbar-button:active {
+            transform: translateY(0);
+        }
+        
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background: #dee2e6;
+            margin: 0 4px;
+        }
+        
+        /* 麵包屑導航 */
+        .breadcrumb {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            color: #6c757d;
+            min-width: 200px;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+        
+        .breadcrumb-item {
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .breadcrumb-item:hover {
+            background: rgba(0, 120, 212, 0.1);
+            color: #0078d4;
+        }
+        
+        .breadcrumb-separator {
+            color: #adb5bd;
+            font-size: 10px;
+            margin: 0 2px;
+        }
+        
+        /* 檔案內容區 */
+        .file-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            background: white;
+        }
+        
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+        }
+        
+        /* 檔案網格 */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 16px;
+        }
+        
+        .file-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 20px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            border: 2px solid transparent;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .file-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 120, 212, 0.1), transparent);
+            transition: left 0.6s;
+        }
+        
+        .file-item:hover::before {
+            left: 100%;
+        }
+        
+        .file-item:hover {
+            border-color: rgba(0, 120, 212, 0.3);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .file-item.selected {
+            background: rgba(0, 120, 212, 0.08);
+            border-color: #0078d4;
+            box-shadow: 0 4px 15px rgba(0, 120, 212, 0.3);
+        }
+        
+        .file-icon {
+            font-size: 48px;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+        
+        .file-item:hover .file-icon {
+            transform: scale(1.1);
+        }
+        
+        /* 檔案類型顏色 */
+        .file-item.folder .file-icon {
+            color: #ffc107;
+        }
+        
+        .file-item.image .file-icon {
+            color: #28a745;
+        }
+        
+        .file-item.video .file-icon {
+            color: #dc3545;
+        }
+        
+        .file-item.audio .file-icon {
+            color: #6f42c1;
+        }
+        
+        .file-item.document .file-icon {
+            color: #fd7e14;
+        }
+        
+        .file-item.archive .file-icon {
+            color: #17a2b8;
+        }
+        
+        .file-item.code .file-icon {
+            color: #20c997;
+        }
+        
+        .file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #495057;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: color 0.2s ease;
+        }
+        
+        .file-item:hover .file-name {
+            color: #0078d4;
+        }
+        
+        .file-size {
+            font-size: 11px;
+            color: #adb5bd;
+            margin-top: -2px;
+        }
+        
+        .file-date {
+            font-size: 10px;
+            color: #ced4da;
+        }
+        
+        /* 載入狀態 */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #6c757d;
+            gap: 16px;
+        }
+        
+        .loading i {
+            font-size: 48px;
+            animation: spin 2s linear infinite;
+            color: #0078d4;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 空資料夾狀態 */
+        .empty-folder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: #adb5bd;
+            text-align: center;
+            gap: 16px;
+        }
+        
+        .empty-folder i {
+            font-size: 72px;
+            opacity: 0.5;
+            color: #dee2e6;
+        }
+        
+        .empty-folder h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin: 0;
+            color: #6c757d;
+        }
+        
+        .empty-folder p {
+            font-size: 14px;
+            opacity: 0.8;
+            margin: 0;
+        }
+        
+        /* 右鍵選單 */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 6px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+            min-width: 180px;
+        }
+        
+        .context-menu-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            color: #495057;
+        }
+        
+        .context-menu-item:hover {
+            background: #f8f9fa;
+            color: #0078d4;
+        }
+        
+        .context-menu-item.danger {
+            color: #dc3545;
+        }
+        
+        .context-menu-item.danger:hover {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .context-menu-separator {
+            height: 1px;
+            background: #e9ecef;
+            margin: 4px 0;
+        }
+        
+        /* 拖放覆蓋層 */
+        .drag-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 120, 212, 0.05);
+            border: 3px dashed #0078d4;
+            border-radius: 12px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #0078d4;
+            font-size: 18px;
+            font-weight: 600;
+            z-index: 100;
+            backdrop-filter: blur(2px);
+        }
+        
+        .drag-overlay.active {
+            display: flex;
+        }
+        
+        .drag-overlay i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        /* 上傳進度條 */
+        .progress-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            min-width: 320px;
+            display: none;
+            z-index: 1001;
+            border: 1px solid #dee2e6;
+        }
+        
+        .progress-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0078d4, #40a9ff);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-image: linear-gradient(
+                -45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 20px 20px;
+            animation: move 2s linear infinite;
+        }
+        
+        @keyframes move {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 20px; }
+        }
+        
+        .progress-text {
+            font-size: 12px;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        /* 隱藏元素 */
+        #fileInput {
+            display: none;
+        }
+        
+        /* 通知樣式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1002;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 350px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s ease;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification.success { background: #28a745; }
+        .notification.error { background: #dc3545; }
+        .notification.warning { background: #ffc107; color: #212529; }
+        .notification.info { background: #17a2b8; }
+        
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .file-toolbar {
+                padding: 8px 12px;
+                flex-wrap: wrap;
+            }
+            
+            .toolbar-button {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            
+            .breadcrumb {
+                order: -1;
+                width: 100%;
+                margin-bottom: 8px;
+                min-width: auto;
+            }
+            
+            .file-grid {
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+                gap: 12px;
+            }
+            
+            .file-list {
+                padding: 12px;
+            }
+            
+            .file-item {
+                padding: 16px 8px;
+            }
+            
+            .file-icon {
+                font-size: 36px;
+            }
+            
+            .file-name {
+                font-size: 12px;
+            }
+            
+            .progress-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                min-width: auto;
+            }
+        }
+        
+        /* 滾動條樣式 */
+        .file-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .file-list::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .file-list::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 4px;
+        }
+        
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #adb5bd;
+        }
+        
+        .breadcrumb::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        .breadcrumb::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .breadcrumb::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+        
+        /* 動畫效果 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+        }
+        
+        .file-item {
+            animation: fadeInUp 0.4s ease forwards;
+        }
+
+        /* ==== Viewer Modal (我新增的樣式) ==== */
+        .viewer-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .viewer-modal.show { display: flex; }
+        .viewer-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+        }
+        .viewer-content {
+            position: relative;
+            width: min(1100px, 92%);
+            max-height: 92%;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            z-index: 2001;
+            display: flex;
+            flex-direction: column;
+        }
+        .viewer-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: none;
+            background: transparent;
+            font-size: 26px;
+            color: #333;
+            cursor: pointer;
+            z-index: 2002;
+        }
+        #viewerBody {
+            padding: 18px;
+            overflow: auto;
+            background: #0f1720;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 320px;
+        }
+        #viewerBody img, #viewerBody video, #viewerBody iframe {
+            max-width: 100%;
+            max-height: calc(92vh - 140px);
+            border-radius: 6px;
+        }
+        #viewerBody pre {
+            width: 100%;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #e6eef8;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+            font-size: 13px;
+        }
+        .viewer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 18px;
+            border-top: 1px solid #eee;
+            background: #fff;
+        }
+        .viewer-meta {
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .viewer-download {
+            text-decoration: none;
+        }
+        .toolbar-button {
+            pointer-events: auto;
+        }
+        .viewer-modal { 
+            pointer-events: none; 
+        }
+        .viewer-modal.show { 
+            pointer-events: auto; 
+        }
+
+        .viewer-backdrop { 
+            pointer-events: none; 
+        }
+        .viewer-modal.show .viewer-backdrop { 
+            pointer-events: auto; 
+        }
+        /* === Fix: overlays should not block clicks when hidden === */
+/* viewer modal hidden 時不攔截事件； show 時才可攔截 */
+.viewer-modal {
+  pointer-events: none;          /* 隱藏時不攔截 */
+}
+.viewer-modal.show {
+  pointer-events: auto;          /* 顯示時才攔截 */
+}
+
+/* backdrop 只有在 modal show 時才攔截 */
+.viewer-backdrop {
+  pointer-events: none;
+}
+.viewer-modal.show .viewer-backdrop {
+  pointer-events: auto;
+}
+
+/* viewer 內容允許互動（按鈕/下載等） */
+.viewer-content {
+  pointer-events: auto;
+}
+
+/* drag overlay 只有 active 時才攔截事件（避免始終擋住按鈕） */
+.drag-overlay {
+  pointer-events: none;
+}
+.drag-overlay.active {
+  pointer-events: auto;
+}
+
+/* loading 區塊不要攔截點擊（即使 visible）*/
+.loading {
+  pointer-events: none;
+}
+
+/* 讓右鍵選單、進度、通知等層級高於 overlay */
+.context-menu { z-index: 10050; pointer-events: auto; }
+.progress-container { z-index: 10051; pointer-events: auto; }
+.notification { z-index: 10052; pointer-events: auto; }
+
+/* 如果仍有全域遮罩影響，可加強保險（非必需） */
+/* .some-global-overlay { pointer-events: none !important; } */
+        .desktop-background {
+    pointer-events: none !important;
+}
+    </style>
+</head>
+<body>
+    <div class="file-manager">
+        <!-- 工具列 -->
+        <div class="file-toolbar">
+            <div class="toolbar-group">
+                <button class="toolbar-button secondary" onclick="goBack()" id="backButton">
+                    <i class="fas fa-arrow-left"></i>
+                    上一層
+                </button>
+                <button class="toolbar-button secondary" onclick="refreshFiles()">
+                    <i class="fas fa-sync-alt"></i>
+                    重新整理
+                </button>
+            </div>
+            
+            <div class="toolbar-separator"></div>
+            
+            <div class="toolbar-group">
+                <button class="toolbar-button primary" onclick="createFolder()">
+                    <i class="fas fa-folder-plus"></i>
+                    新增資料夾
+                </button>
+                <button class="toolbar-button success" onclick="uploadFile()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    上傳檔案
+                </button>
+            </div>
+            
+            <div class="breadcrumb" id="breadcrumb">
+                <div class="breadcrumb-item" onclick="navigateTo('')">
+                    <i class="fas fa-home"></i>
+                    <span>首頁</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 檔案內容區 -->
+        <div class="file-content">
+            <div class="file-list">
+                <div class="loading" id="loading">
+                    <i class="fas fa-spinner"></i>
+                    <span>載入中...</span>
+                </div>
+                
+                <div class="file-grid" id="fileGrid" style="display: none;">
+                    <!-- 檔案項目將在這裡動態載入 -->
+                </div>
+                
+                <div class="empty-folder" id="emptyFolder" style="display: none;">
+                    <i class="fas fa-folder-open"></i>
+                    <h3>此資料夾是空的</h3>
+                    <p>拖放檔案到此處或點擊上傳按鈕來新增內容</p>
+                </div>
+            </div>
+            
+            <!-- 拖放覆蓋層 -->
+            <div class="drag-overlay" id="dragOverlay">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>放開滑鼠以上傳檔案</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Viewer Modal（我新增的）-->
+    <div id="viewerModal" class="viewer-modal" aria-hidden="true">
+        <div class="viewer-backdrop" onclick="closeViewer()"></div>
+        <div class="viewer-content" role="dialog" aria-modal="true">
+            <button class="viewer-close" onclick="closeViewer()" title="關閉">&times;</button>
+            <div id="viewerBody"></div>
+            <div class="viewer-footer">
+                <div class="viewer-meta" id="viewerMeta">正在載入…</div>
+                <div>
+                    <a id="viewerDownload" class="toolbar-button secondary viewer-download" href="#" target="_blank">
+                        <i class="fas fa-download"></i> 下載
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右鍵選單 -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="openFile()">
+            <i class="fas fa-external-link-alt"></i>
+            開啟
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" onclick="downloadFile()">
+            <i class="fas fa-download"></i>
+            下載
+        </div>
+        <div class="context-menu-item" onclick="renameFile()">
+            <i class="fas fa-edit"></i>
+            重新命名
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" onclick="deleteFile()">
+            <i class="fas fa-trash"></i>
+            刪除
+        </div>
+    </div>
+    
+    <!-- 上傳進度 -->
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-title">
+            <i class="fas fa-cloud-upload-alt"></i>
+            上傳檔案
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text">
+            <span id="progressText">準備中...</span>
+            <span id="progressPercent">0%</span>
+        </div>
+    </div>
+    
+    <!-- 隱藏的檔案輸入 -->
+    <input type="file" id="fileInput" multiple>
+    
+    <script>
+        let currentPath = '';
+        let selectedItem = null;
+        let dragCounter = 0;
+        let currentObjectUrl = null; // 用來釋放 viewer 用的 URL
+        
+        // 導航到指定路徑   // 1048 行
+        function navigateTo(path) {
+            currentPath = path;
+            selectedItem = null;
+            loadFiles();
+        }
+        
+        // 返回上一層
+        function goBack() {
+            if (currentPath) {
+                const pathParts = currentPath.split('/').filter(p => p);
+                pathParts.pop();
+                currentPath = pathParts.join('/');
+                loadFiles();
+            }
+        }
+        
+        // 更新返回按鈕狀態
+        function updateBackButton() {
+            const backButton = document.getElementById('backButton');
+            if (currentPath) {
+                backButton.disabled = false;
+                backButton.style.opacity = '1';
+            } else {
+                backButton.disabled = true;
+                backButton.style.opacity = '0.6';
+            }
+        }
+        
+        // 重新整理檔案列表
+        function refreshFiles() {
+            loadFiles();
+            showNotification('檔案列表已重新整理', 'success');
+        }
+        
+        // 更新麵包屑導航
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = `
+                <div class="breadcrumb-item" onclick="navigateTo('')">
+                    <i class="fas fa-home"></i>
+                    <span>首頁</span>
+                </div>
+            `;
+            
+            if (currentPath) {
+                const pathParts = currentPath.split('/').filter(p => p);
+                let fullPath = '';
+                
+                pathParts.forEach((part, index) => {
+                    fullPath += (fullPath ? '/' : '') + part;
+                    breadcrumb.innerHTML += `
+                        <div class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></div>
+                        <div class="breadcrumb-item" onclick="navigateTo('${fullPath}')">${part}</div>
+                    `;
+                });
+            }
+        }
+        
+        // 上傳檔案
+        function uploadFile() {
+            document.getElementById('fileInput').click();
+        }
+        
+        // 處理檔案選擇
+        async function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                await uploadFiles(files);
+            }
+            event.target.value = ''; // 清空輸入
+        }
+        
+        // 上傳檔案
+        async function uploadFiles(files) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const progressPercent = document.getElementById('progressPercent');
+            
+            progressContainer.style.display = 'block';
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', currentPath);
+                
+                progressText.textContent = `正在上傳: ${file.name}`;
+                
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        const progress = ((i + 1) / files.length) * 100;
+                        progressFill.style.width = `${progress}%`;
+                        progressPercent.textContent = `${Math.round(progress)}%`;
+                        showNotification(`${file.name} 上傳成功`, 'success');
+                    } else {
+                        console.error('上傳失敗:', result.error);
+                        showNotification(`${file.name} 上傳失敗: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('上傳錯誤:', error);
+                    showNotification(`${file.name} 上傳時發生錯誤`, 'error');
+                }
+            }
+            
+            progressText.textContent = '上傳完成';
+            progressPercent.textContent = '100%';
+            
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+                progressFill.style.width = '0%';
+                progressPercent.textContent = '0%';
+            }, 2000);
+            
+            // 重新載入檔案列表
+            loadFiles();
+        }
+        
+        // 創建資料夾
+async function createFolder() {
+    const folderName = prompt('請輸入資料夾名稱:');
+    
+    // 驗證資料夾名稱
+    if (!folderName || !folderName.trim()) {
+        showNotification('資料夾名稱不能為空', 'warning');
+        return;
+    }
+
+    // 基本的名稱驗證
+    const sanitizedName = folderName.trim()
+        .replace(/[<>:"\/\\|?*\x00-\x1F]/g, '') // 移除非法字元
+        .replace(/^\.+/, '');  // 移除開頭的點
+
+    if (!sanitizedName) {
+        showNotification('請輸入有效的資料夾名稱', 'warning');
+        return;
+    }
+    
+    try {
+        console.log('準備建立資料夾:', {
+            name: sanitizedName,
+            path: currentPath
+        });
+
+        const response = await fetch('/api/create_folder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                name: sanitizedName,
+                path: currentPath
+            })
+        });
+
+        console.log('伺服器回應狀態:', response.status);
+        const result = await response.json();
+        console.log('伺服器回應:', result);
+        
+        if (response.ok) {
+            await loadFiles();
+            showNotification(`資料夾「${sanitizedName}」建立成功`, 'success');
+        } else {
+            const errorMessage = result.error === '無效的資料夾名稱' 
+                ? '資料夾名稱不能包含特殊字元' 
+                : result.error || '建立失敗';
+            showNotification(errorMessage, 'error');
+        }
+    } catch (error) {
+        console.error('建立資料夾錯誤:', error);
+        showNotification('建立資料夾時發生錯誤', 'error');
+    }
+}
+        
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFiles();
+            setupEventListeners();
+        });
+        
+        // 設置事件監聽器
+        function setupEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // 拖放事件
+            const fileList = document.querySelector('.file-list');
+            fileList.addEventListener('dragenter', handleDragEnter);
+            fileList.addEventListener('dragover', handleDragOver);
+            fileList.addEventListener('dragleave', handleDragLeave);
+            fileList.addEventListener('drop', handleDrop);
+            
+            // 右鍵選單
+            document.addEventListener('click', hideContextMenu);
+            document.addEventListener('contextmenu', function(e) {
+                if (!e.target.closest('.file-item')) {
+                    hideContextMenu();
+                }
+            });
+            
+            // 鍵盤事件
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // 點擊空白處取消選擇
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.file-item') && !event.target.closest('.context-menu')) {
+                    selectFile(null);
+                }
+            });
+        }
+        
+        // 載入檔案列表
+async function loadFiles() {
+    const loading = document.getElementById('loading');
+    const fileGrid = document.getElementById('fileGrid');
+    const emptyFolder = document.getElementById('emptyFolder');
+
+    loading.style.display = 'flex';
+    fileGrid.style.display = 'none';
+    emptyFolder.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/files?path=${encodeURIComponent(currentPath)}`, { credentials: 'same-origin' });
+
+        // 先判斷 Content-Type，避免把 HTML 當成 JSON 去 parse（例如被導到登入頁面）
+        const ct = (response.headers.get('content-type') || '').toLowerCase();
+
+        if (!ct.includes('application/json')) {
+            // 可能被導到登入頁、或回傳錯誤 HTML -> 直接導到登入頁或顯示錯誤
+            const text = await response.text();
+            console.warn('非 JSON 回應，內容前 300 字：', text.slice(0, 300));
+            // 如果看起來像登入頁（含 "login" 關鍵字），導回登入
+            if (text.toLowerCase().includes('login') || text.toLowerCase().includes('登入')) {
+                window.location.href = '/login';
+                return;
+            } else {
+                showNotification('載入檔案失敗（伺服器回傳非 JSON）', 'error');
+                return;
+            }
+        }
+
+        const data = await response.json();
+
+        if (response.ok) {
+            displayFiles(data.files || []);
+            updateBreadcrumb();
+            updateBackButton();
+        } else {
+            showNotification('載入檔案失敗: ' + (data && data.error ? data.error : 'Unknown'), 'error');
+        }
+    } catch (error) {
+        console.error('載入檔案錯誤:', error);
+        showNotification('載入檔案時發生錯誤', 'error');
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+        
+        // 顯示檔案列表
+        function displayFiles(files) {
+            const fileGrid = document.getElementById('fileGrid');
+            const emptyFolder = document.getElementById('emptyFolder');
+            
+            if (files.length === 0) {
+                emptyFolder.style.display = 'flex';
+                fileGrid.style.display = 'none';
+                return;
+            }
+            
+            fileGrid.innerHTML = '';
+            fileGrid.style.display = 'grid';
+            
+            files.forEach((file, index) => {
+                const fileItem = createFileItem(file);
+                fileItem.style.animationDelay = `${index * 50}ms`;
+                fileGrid.appendChild(fileItem);
+            });
+        }
+        
+        // 創建檔案項目
+        function createFileItem(file) {
+            const item = document.createElement('div');
+            item.className = `file-item ${getFileType(file)}`;
+            item.dataset.path = file.path;
+            item.dataset.name = file.name;
+            item.dataset.type = file.type;
+            // 保留 extension 作為 dataset（若 API 有提供）
+            item.dataset.extension = file.extension || (file.name && file.name.includes('.') ? '.' + file.name.split('.').pop().toLowerCase() : '');
+            
+            const icon = getFileIcon(file);
+            
+            item.innerHTML = `
+                <i class="file-icon ${icon}"></i>
+                <div class="file-name" title="${file.name}">${file.name}</div>
+                ${file.type === 'file' ? `<div class="file-size">${file.size_formatted}</div>` : ''}
+                <div class="file-date">${formatDate(file.modified)}</div>
+            `;
+            
+            // ----- 新增：fileGrid 事件代理（capture 階段，保證在 item 的 stopPropagation 之前處理） -----
+const fileGridEl = document.getElementById('fileGrid');
+if (fileGridEl) {
+    // capture 階段處理單擊：單擊直接開啟（資料夾 -> navigate；檔案 -> openFile）
+    fileGridEl.addEventListener('click', function (e) {
+        const item = e.target.closest('.file-item');
+        if (!item) return; // 不是點在 file-item 上
+        // 統一用 dataset 建構 fileObj
+        const fileObj = {
+            path: item.dataset.path,
+            name: item.dataset.name,
+            type: item.dataset.type,
+            extension: item.dataset.extension || (item.dataset.name && item.dataset.name.includes('.') ? '.' + item.dataset.name.split('.').pop().toLowerCase() : '')
+        };
+        // 如果是資料夾 -> 立刻導航
+        if (fileObj.type === 'folder') {
+            e.preventDefault();
+            // console.log('代理 click -> folder navigate', fileObj.path);
+            navigateTo(fileObj.path);
+            return;
+        }
+        // 檔案 -> 直接開啟 Viewer（不只是選取）
+        e.preventDefault();
+        // console.log('代理 click -> open file', fileObj);
+        openFile(fileObj);
+    }, true); // 注意第三參數 true（capture），確保能在 item 的 stopPropagation 前執行
+
+    // 補強：雙擊在 bubble 階段也處理（保險）
+    fileGridEl.addEventListener('dblclick', function (e) {
+        const item = e.target.closest('.file-item');
+        if (!item) return;
+        const fileObj = {
+            path: item.dataset.path,
+            name: item.dataset.name,
+            type: item.dataset.type,
+            extension: item.dataset.extension || (item.dataset.name && item.dataset.name.includes('.') ? '.' + item.dataset.name.split('.').pop().toLowerCase() : '')
+        };
+        openFile(fileObj);
+    }, false);
+}
+            
+            item.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectFile(item);
+                // 同上，傳入 file 給 showContextMenu
+                const fileObj = {
+                    path: item.dataset.path,
+                    name: item.dataset.name,
+                    type: item.dataset.type,
+                    extension: item.dataset.extension
+                };
+                showContextMenu(e, fileObj);
+            });
+            
+            return item;
+        }
+        
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+        
+        // 獲取檔案類型
+        function getFileType(file) {
+            if (file.type === 'folder') return 'folder';
+            
+            const ext = (file.extension || (file.name && file.name.includes('.') ? '.' + file.name.split('.').pop().toLowerCase() : '')).toLowerCase();
+            
+            if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'].includes(ext)) {
+                return 'image';
+            }
+            if (['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm'].includes(ext)) {
+                return 'video';
+            }
+            if (['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma'].includes(ext)) {
+                return 'audio';
+            }
+            if (['.doc', '.docx', '.pdf', '.txt', '.rtf', '.odt'].includes(ext)) {
+                return 'document';
+            }
+            if (['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].includes(ext)) {
+                return 'archive';
+            }
+            if (['.html', '.css', '.js', '.py', '.java', '.cpp', '.c', '.php'].includes(ext)) {
+                return 'code';
+            }
+            
+            return 'file';
+        }
+        
+        // 獲取檔案圖標
+        function getFileIcon(file) {
+            if (file.type === 'folder') return 'fas fa-folder';
+            
+            const ext = (file.extension || (file.name && file.name.includes('.') ? '.' + file.name.split('.').pop().toLowerCase() : '')).toLowerCase();
+            
+            const iconMap = {
+                // 圖片
+                '.jpg': 'fas fa-file-image', '.jpeg': 'fas fa-file-image', '.png': 'fas fa-file-image',
+                '.gif': 'fas fa-file-image', '.bmp': 'fas fa-file-image', '.webp': 'fas fa-file-image',
+                '.svg': 'fas fa-file-image',
+                
+                // 影片
+                '.mp4': 'fas fa-file-video', '.avi': 'fas fa-file-video', '.mkv': 'fas fa-file-video',
+                '.mov': 'fas fa-file-video', '.wmv': 'fas fa-file-video', '.flv': 'fas fa-file-video',
+                '.webm': 'fas fa-file-video',
+                
+                // 音訊
+                '.mp3': 'fas fa-file-audio', '.wav': 'fas fa-file-audio', '.flac': 'fas fa-file-audio',
+                '.aac': 'fas fa-file-audio', '.ogg': 'fas fa-file-audio', '.wma': 'fas fa-file-audio',
+                
+                // 文件
+                '.doc': 'fas fa-file-word', '.docx': 'fas fa-file-word',
+                '.pdf': 'fas fa-file-pdf',
+                '.txt': 'fas fa-file-alt', '.rtf': 'fas fa-file-alt',
+                '.xls': 'fas fa-file-excel', '.xlsx': 'fas fa-file-excel',
+                '.ppt': 'fas fa-file-powerpoint', '.pptx': 'fas fa-file-powerpoint',
+                
+                // 壓縮檔
+                '.zip': 'fas fa-file-archive', '.rar': 'fas fa-file-archive', '.7z': 'fas fa-file-archive',
+                '.tar': 'fas fa-file-archive', '.gz': 'fas fa-file-archive', '.bz2': 'fas fa-file-archive',
+                
+                // 程式碼
+                '.html': 'fas fa-file-code', '.css': 'fas fa-file-code', '.js': 'fas fa-file-code',
+                '.py': 'fas fa-file-code', '.java': 'fas fa-file-code', '.cpp': 'fas fa-file-code',
+                '.c': 'fas fa-file-code', '.php': 'fas fa-file-code'
+            };
+            
+            return iconMap[ext] || 'fas fa-file';
+        }
+        
+        // 選擇檔案
+        function selectFile(item) {
+            // 清除之前的選擇
+            document.querySelectorAll('.file-item.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // 選擇當前項目
+            if (item) {
+                item.classList.add('selected');
+                selectedItem = {
+                    path: item.dataset.path,
+                    name: item.dataset.name,
+                    type: item.dataset.type,
+                    element: item
+                };
+            } else {
+                selectedItem = null;
+            }
+        }
+        
+        // 開啟檔案/資料夾（增加大量 console.log 便於桌機除錯） ---
+async function openFile(file = null) {
+    if (!file && selectedItem) {
+        file = {
+            path: selectedItem.path,
+            name: selectedItem.name,
+            type: selectedItem.type,
+            extension: selectedItem.name && selectedItem.name.includes('.') ? '.' + selectedItem.name.split('.').pop().toLowerCase() : ''
+        };
+    }
+    if (!file) return console.log('openFile: no file specified');
+
+    console.log('openFile called:', file);
+
+    // 資料夾直接導航（冗餘保險）
+    if (file.type === 'folder') {
+        console.log('openFile: is folder -> navigateTo', file.path);
+        navigateTo(file.path);
+        return;
+    }
+
+    let ext = (file.extension || (file.name && file.name.includes('.') ? '.' + file.name.split('.').pop().toLowerCase() : '')).toLowerCase();
+
+    const imageExt = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    const videoExt = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm'];
+    const audioExt = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma'];
+    const textExt  = ['.txt', '.md', '.log', '.csv'];
+    const codeExt  = ['.js', '.py', '.java', '.cpp', '.c', '.php', '.html', '.css', '.json'];
+    const pdfExt   = ['.pdf'];
+
+    const url = `/api/download/${encodeURIComponent(file.path)}`;
+    console.log('openFile fetch url:', url);
+
+    try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        console.log('fetch response status:', res.status, res.statusText);
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        console.log('fetch content-type:', ct);
+
+        if (!res.ok) {
+            const txt = await res.text();
+            console.warn('openFile: non-2xx response, body (first 400 chars):', txt.slice(0,400));
+            // 如果疑似導向登入頁
+            if (txt.toLowerCase().includes('login') || txt.toLowerCase().includes('登入')) {
+                console.warn('openFile: looks like login redirect -> go to /login');
+                window.location.href = '/login';
+                return;
+            }
+            showNotification(`無法取得檔案：${res.status} ${res.statusText}`, 'error');
+            return;
+        }
+
+        // 依 content-type / ext 判別
+        if (ct.startsWith('image/') || imageExt.includes(ext)) {
+            const blob = await res.blob();
+            const objUrl = URL.createObjectURL(blob);
+            console.log('openFile: showing image, blob size=', blob.size);
+            showViewerImage(objUrl, file.name);
+            return;
+        }
+
+        if (ct.startsWith('video/') || videoExt.includes(ext)) {
+            const blob = await res.blob();
+            const objUrl = URL.createObjectURL(blob);
+            console.log('openFile: showing video, blob size=', blob.size);
+            showViewerVideo(objUrl, file.name);
+            return;
+        }
+
+        if (ct.startsWith('audio/') || audioExt.includes(ext)) {
+            const blob = await res.blob();
+            const objUrl = URL.createObjectURL(blob);
+            console.log('openFile: showing audio, blob size=', blob.size);
+            showViewerAudio(objUrl, file.name);
+            return;
+        }
+
+        if (ct.includes('pdf') || pdfExt.includes(ext)) {
+            const blob = await res.blob();
+            const objUrl = URL.createObjectURL(blob);
+            console.log('openFile: showing pdf, blob size=', blob.size);
+            showViewerPDF(objUrl, file.name);
+            return;
+        }
+
+        if (ct.startsWith('text/') || textExt.includes(ext) || codeExt.includes(ext) || ct.includes('json')) {
+            const text = await res.text();
+            console.log('openFile: showing text, length=', text.length);
+            showViewerText(text, file.name);
+            return;
+        }
+
+        // fallback: 直接 blob 在新分頁開啟
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        console.log('openFile: fallback open in new tab, blob size=', blob.size);
+        window.open(objUrl, '_blank');
+        setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
+
+    } catch (err) {
+        console.error('openFile 錯誤:', err);
+        showNotification('打開檔案時發生錯誤', 'error');
+    }
+}
+        
+        // 下列 function 用於在 modal 顯示不同類型
+        function showViewerImage(objUrl, filename) {
+            openViewer();
+            const body = document.getElementById('viewerBody');
+            body.innerHTML = `<img src="${objUrl}" alt="${escapeHtml(filename)}">`;
+            setViewerDownloadLink(objUrl, filename);
+            setViewerMeta(filename);
+            rememberObjectUrl(objUrl);
+        }
+        function showViewerVideo(objUrl, filename) {
+            openViewer();
+            const body = document.getElementById('viewerBody');
+            body.innerHTML = `<video controls src="${objUrl}"></video>`;
+            setViewerDownloadLink(objUrl, filename);
+            setViewerMeta(filename);
+            rememberObjectUrl(objUrl);
+        }
+        function showViewerAudio(objUrl, filename) {
+            openViewer();
+            const body = document.getElementById('viewerBody');
+            body.innerHTML = `<audio controls src="${objUrl}"></audio>`;
+            setViewerDownloadLink(objUrl, filename);
+            setViewerMeta(filename);
+            rememberObjectUrl(objUrl);
+        }
+        function showViewerPDF(objUrl, filename) {
+            openViewer();
+            const body = document.getElementById('viewerBody');
+            // iframe 可以正常顯示 PDF
+            body.innerHTML = `<iframe src="${objUrl}" style="width:100%;height:70vh;border:0;"></iframe>`;
+            setViewerDownloadLink(objUrl, filename);
+            setViewerMeta(filename);
+            rememberObjectUrl(objUrl);
+        }
+        function showViewerText(text, filename) {
+            openViewer();
+            const body = document.getElementById('viewerBody');
+            const pre = document.createElement('pre');
+            pre.textContent = text;
+            body.innerHTML = '';
+            body.appendChild(pre);
+            // 為了下載也需要 blob
+            const blob = new Blob([text], { type: 'text/plain' });
+            const objUrl = URL.createObjectURL(blob);
+            setViewerDownloadLink(objUrl, filename);
+            setViewerMeta(filename);
+            rememberObjectUrl(objUrl);
+        }
+        
+        function escapeHtml(s) {
+            return s.replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+        }
+        
+        function setViewerDownloadLink(objUrl, filename) {
+            const dl = document.getElementById('viewerDownload');
+            dl.href = objUrl;
+            dl.download = filename || '';
+        }
+        function setViewerMeta(filename) {
+            const meta = document.getElementById('viewerMeta');
+            meta.textContent = filename || '';
+        }
+        // Replace your existing openViewer() with this:
+function openViewer() {
+    const modal = document.getElementById('viewerModal');
+    // 加 class 並顯式允許事件
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    // 確保 backdrop 可攔截，而 modal 頁面內可互動
+    modal.style.pointerEvents = 'auto';
+    const backdrop = modal.querySelector('.viewer-backdrop');
+    if (backdrop) backdrop.style.pointerEvents = 'auto';
+    const content = modal.querySelector('.viewer-content');
+    if (content) content.style.pointerEvents = 'auto';
+}
+
+// Replace your existing closeViewer() with this:
+function closeViewer() {
+    const modal = document.getElementById('viewerModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    // 隱藏時不要攔截事件
+    modal.style.pointerEvents = 'none';
+    const backdrop = modal.querySelector('.viewer-backdrop');
+    if (backdrop) backdrop.style.pointerEvents = 'none';
+    const content = modal.querySelector('.viewer-content');
+    if (content) content.style.pointerEvents = 'none';
+
+    // 清空 viewer 內容並釋放 object URL（若有）
+    const body = document.getElementById('viewerBody');
+    body.innerHTML = '';
+    const dl = document.getElementById('viewerDownload');
+    if (dl) { dl.href = '#'; dl.download = ''; }
+
+    if (currentObjectUrl) {
+        try { URL.revokeObjectURL(currentObjectUrl); } catch(e){}
+        currentObjectUrl = null;
+    }
+}
+        function rememberObjectUrl(url) {
+            // 釋放舊的
+            if (currentObjectUrl && currentObjectUrl !== url) {
+                try { URL.revokeObjectURL(currentObjectUrl); } catch(e){}
+            }
+            currentObjectUrl = url;
+        }
+
+        // 下載檔案（保留你原本的行為）
+        function downloadFile(filePath) {
+            if (!filePath) {
+                if (!selectedItem || selectedItem.type === 'folder') {
+                    showNotification('請選擇一個檔案來下載', 'warning');
+                    return;
+                }
+                filePath = selectedItem.path;
+            }
+            
+            const link = document.createElement('a');
+            link.href = `/api/download/${encodeURIComponent(filePath)}`;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('檔案下載開始', 'info');
+        }
+        
+        // 重新命名檔案
+        async function renameFile() {
+            if (!selectedItem) {
+                showNotification('請先選擇要重新命名的項目', 'warning');
+                return;
+            }
+            
+            const newName = prompt('請輸入新名稱:', selectedItem.name);
+            if (!newName || newName === selectedItem.name) return;
+            
+            try {
+                const response = await fetch('/api/rename', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        oldPath: selectedItem.path,
+                        newName: newName.trim()
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    loadFiles();
+                    selectedItem = null;
+                    showNotification(`重新命名為 "${newName}" 成功`, 'success');
+                } else {
+                    showNotification(`重新命名失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('重新命名錯誤:', error);
+                showNotification('重新命名時發生錯誤', 'error');
+            }
+        }
+        
+        // 刪除檔案
+        async function deleteFile() {
+            if (!selectedItem) {
+                showNotification('請先選擇要刪除的項目', 'warning');
+                return;
+            }
+            
+            const itemType = selectedItem.type === 'folder' ? '資料夾' : '檔案';
+            if (!confirm(`確定要刪除${itemType} "${selectedItem.name}" 嗎？\n\n此操作無法復原！`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        path: selectedItem.path
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // 添加刪除動畫
+                    if (selectedItem.element) {
+                        selectedItem.element.style.animation = 'fadeOut 0.3s ease forwards';
+                        setTimeout(() => {
+                            loadFiles();
+                        }, 300);
+                    } else {
+                        loadFiles();
+                    }
+                    selectedItem = null;
+                    showNotification(`${itemType}刪除成功`, 'success');
+                } else {
+                    showNotification(`刪除失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('刪除錯誤:', error);
+                showNotification('刪除時發生錯誤', 'error');
+            }
+        }
+        
+        // 顯示右鍵選單
+        function showContextMenu(event, file) {
+            const contextMenu = document.getElementById('contextMenu');
+            
+            // 設置選單位置
+            let x = event.pageX;
+            let y = event.pageY;
+            
+            // 防止選單超出視窗範圍
+            const menuWidth = 180;
+            const menuHeight = 140;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            if (x + menuWidth > windowWidth) {
+                x = windowWidth - menuWidth - 10;
+            }
+            if (y + menuHeight > windowHeight) {
+                y = windowHeight - menuHeight - 10;
+            }
+            
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.style.display = 'block';
+            
+            // 根據檔案類型調整選單項目
+            const openItem = contextMenu.querySelector('.context-menu-item');
+            // 取得所有 context-menu-item 的集合，index 1 應是下載（和原本結構一致）
+            const items = contextMenu.querySelectorAll('.context-menu-item');
+            const downloadItem = items[1] || null;
+            
+            if (file && file.type === 'folder') {
+                openItem.innerHTML = '<i class="fas fa-folder-open"></i>開啟資料夾';
+                if (downloadItem) downloadItem.style.display = 'none';
+            } else {
+                openItem.innerHTML = '<i class="fas fa-download"></i>下載檔案';
+                if (downloadItem) downloadItem.style.display = 'block';
+            }
+        }
+        
+        // 隱藏右鍵選單
+        function hideContextMenu(event) {
+            const contextMenu = document.getElementById('contextMenu');
+            if (!event || !contextMenu.contains(event.target)) {
+                contextMenu.style.display = 'none';
+            }
+        }
+        
+        // 處理拖放事件
+        function handleDragEnter(event) {
+            event.preventDefault();
+            dragCounter++;
+            if (dragCounter === 1) {
+                document.getElementById('dragOverlay').classList.add('active');
+            }
+        }
+        
+        function handleDragOver(event) {
+            event.preventDefault();
+        }
+        
+        function handleDragLeave(event) {
+            event.preventDefault();
+            dragCounter--;
+            if (dragCounter === 0) {
+                document.getElementById('dragOverlay').classList.remove('active');
+            }
+        }
+        
+        async function handleDrop(event) {
+            event.preventDefault();
+            dragCounter = 0;
+            document.getElementById('dragOverlay').classList.remove('active');
+            
+            const files = Array.from(event.dataTransfer.files);
+            if (files.length > 0) {
+                await uploadFiles(files);
+            }
+        }
+        
+        // 鍵盤快捷鍵
+        function handleKeyDown(event) {
+            // 防止在輸入框中觸發快捷鍵
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            switch (event.key) {
+                case 'Delete':
+                    if (selectedItem) {
+                        deleteFile();
+                    }
+                    break;
+                case 'F5':
+                    event.preventDefault();
+                    refreshFiles();
+                    break;
+                case 'F2':
+                    if (selectedItem) {
+                        renameFile();
+                    }
+                    break;
+                case 'Enter':
+                    if (selectedItem) {
+                        openFile();
+                    }
+                    break;
+                case 'Escape':
+                    selectFile(null);
+                    hideContextMenu();
+                    closeViewer(); // ESC 也關閉 viewer
+                    break;
+                case 'Backspace':
+                    if (currentPath) {
+                        goBack();
+                    }
+                    break;
+            }
+            
+            // Ctrl + 快捷鍵
+            if (event.ctrlKey) {
+                switch (event.key.toLowerCase()) {
+                    case 'u':
+                        event.preventDefault();
+                        uploadFile();
+                        break;
+                    case 'n':
+                        event.preventDefault();
+                        createFolder();
+                        break;
+                    case 'a':
+                        event.preventDefault();
+                        // 全選功能（可選實現）
+                        break;
+                }
+            }
+        }
+        
+        // 通知系統
+        function showNotification(message, type = 'info') {
+            // 移除現有的通知
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // 創建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // 顯示動畫
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // 自動移除
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+    </script>
+</body>
+</html>

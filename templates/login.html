@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAS - 登入</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='desktop.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <h2><i class="fas fa-server"></i> NAS</h2>
+            <p style="color: #666; margin-bottom: 30px;">Network Attached Storage</p>
+            
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert">
+                        {{ messages[0] }}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" class="login-form">
+                <div class="form-group">
+                    <label for="username">使用者名稱</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">密碼</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="remember_me" name="remember_me" value="true" style="width: auto;">
+                    <label for="remember_me" style="margin: 0; font-size: 14px;">記住我的登入狀態</label>
+                </div>
+                
+                <button type="submit" class="login-button">
+                    <i class="fas fa-sign-in-alt"></i> 登入
+                </button>
+            </form>
+            </div>
+        </div>
+    
+    <script>
+        // 聚焦到用戶名輸入框
+        document.getElementById('username').focus();
+        
+        // 按下 Enter 鍵自動提交表單
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('.login-form').submit();
+            }
+        });
+    </script>
+</body>
+</html>

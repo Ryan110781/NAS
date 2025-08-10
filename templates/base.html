@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NAS - Network Attached Storage{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='desktop.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Windows 11 Taskbar -->
+    <div class="taskbar">
+        <div class="taskbar-left">
+            <button class="start-button" onclick="toggleStartMenu()">
+                <i class="fab fa-windows"></i>
+            </button>
+            <button class="taskbar-item active" onclick="showWindow('desktop')">
+                <i class="fas fa-desktop"></i>
+            </button>
+            <button class="taskbar-item" onclick="showWindow('filemanager')">
+                <i class="fas fa-folder"></i>
+            </button>
+            <button class="taskbar-item" onclick="showWindow('settings')">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+        <div class="taskbar-center">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="輸入要搜尋的內容">
+            </div>
+        </div>
+        <div class="taskbar-right">
+            <div class="system-tray">
+                <span class="time" id="current-time"></span>
+                <button class="notification-button">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <button class="user-button" onclick="toggleUserMenu()">
+                    <i class="fas fa-user"></i>
+                    {% if session.username %}{{ session.username }}{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Menu -->
+    <div class="start-menu" id="startMenu">
+        <div class="start-menu-header">
+            <h3>NAS</h3>
+        </div>
+        <div class="start-menu-apps">
+            <div class="app-item" onclick="openDesktopApp('filemanager'); hideStartMenu();">
+                <i class="fas fa-folder"></i>
+                <span>檔案管理員</span>
+            </div>
+            <div class="app-item" onclick="openDesktopApp('settings'); hideStartMenu();">
+                <i class="fas fa-cog"></i>
+                <span>設定</span>
+            </div>
+            <div class="app-item" onclick="openDesktopApp('about'); hideStartMenu();">
+                <i class="fas fa-info-circle"></i>
+                <span>關於</span>
+            </div>
+        </div>
+        <div class="start-menu-footer">
+            <button onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                登出
+            </button>
+        </div>
+    </div>
+
+    <!-- User Menu -->
+    <div class="user-menu" id="userMenu">
+        <div class="user-info">
+            <i class="fas fa-user-circle"></i>
+            <span>{% if session.username %}{{ session.username }}{% endif %}</span>
+        </div>
+        <hr>
+        <button onclick="showWindow('settings')">
+            <i class="fas fa-cog"></i>
+            設定
+        </button>
+        <button onclick="logout()">
+            <i class="fas fa-sign-out-alt"></i>
+            登出
+        </button>
+    </div>
+
+    <!-- Desktop Background -->
+    <div class="desktop-background">
+        <!-- Desktop Icons -->
+<div class="desktop-icons">
+    <div class="desktop-icon" data-app="filemanager" draggable="true">
+        <i class="fas fa-folder"></i>
+        <span>檔案管理員</span>
+    </div>
+    <div class="desktop-icon" data-app="settings" draggable="true">
+        <i class="fas fa-cog"></i>
+        <span>設定</span>
+    </div>
+    <div class="desktop-icon" data-app="about" draggable="true">
+        <i class="fas fa-info-circle"></i>
+        <span>關於 NAS</span>
+           </div>
+       </div>
+    </div>
+
+    <!-- Windows Container -->
+    <div class="windows-container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        let openWindows = [];
+        let windowZIndex = 100;
+        
+        // 更新時間
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-TW', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            const dateString = now.toLocaleDateString('zh-TW', {
+                month: 'numeric',
+                day: 'numeric'
+            });
+            document.getElementById('current-time').innerHTML = `${dateString}<br>${timeString}`;
+        }
+
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Start Menu 控制
+        function toggleStartMenu() {
+            const startMenu = document.getElementById('startMenu');
+            startMenu.classList.toggle('show');
+        }
+        
+        function hideStartMenu() {
+            document.getElementById('startMenu').classList.remove('show');
+        }
+
+        // User Menu 控制
+        function toggleUserMenu() {
+            const userMenu = document.getElementById('userMenu');
+            userMenu.classList.toggle('show');
+        }
+
+        // 隱藏菜單
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.start-button') && !e.target.closest('.start-menu')) {
+                hideStartMenu();
+            }
+            if (!e.target.closest('.user-button') && !e.target.closest('.user-menu')) {
+                document.getElementById('userMenu').classList.remove('show');
+            }
+        });
+
+        // 桌面圖示功能
+        function selectDesktopIcon(icon) {
+            // 清除其他選中的圖示
+            document.querySelectorAll('.desktop-icon.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            icon.classList.add('selected');
+        }
+
+        function openDesktopApp(appName) {
+            console.log('Opening app:', appName);
+            showWindow(appName);
+        }
+
+        // 窗口管理
+        function showWindow(windowId) {
+            console.log('Showing window:', windowId);
+            
+            if (windowId === 'desktop') {
+                // 最小化所有窗口
+                document.querySelectorAll('.window').forEach(win => {
+                    win.classList.remove('active');
+                    win.classList.add('minimized');
+                });
+                updateTaskbarButtons();
+                return;
+            }
+            
+            // 檢查窗口是否已存在
+            let window = document.getElementById(windowId);
+            if (window) {
+                // 如果窗口已存在，取消最小化並置頂
+                window.classList.remove('minimized');
+                window.classList.add('active');
+                bringWindowToFront(window);
+            } else {
+                // 創建新窗口
+                window = createWindow(windowId);
+                if (window) {
+                    openWindows.push(windowId);
+                }
+            }
+            
+            updateTaskbarButtons();
+        }
+
+        function createWindow(windowId) {
+            const container = document.querySelector('.windows-container');
+            
+            let title = '';
+            let url = '';
+            
+            switch(windowId) {
+                case 'filemanager':
+                    title = '檔案管理員';
+                    url = '/filemanager';
+                    break;
+                case 'settings':
+                    title = '設定';
+                    url = '/settings';
+                    break;
+                case 'about':
+                    title = '關於 NAS';
+                    url = '/about';
+                    break;
+                default:
+                    console.error('Unknown window:', windowId);
+                    return null;
+            }
+            
+            const newWindow = document.createElement('div');
+            newWindow.className = 'window active';
+            newWindow.id = windowId;
+            newWindow.style.zIndex = ++windowZIndex;
+            
+            newWindow.innerHTML = `
+                <div class="window-header" onmousedown="startDrag(event, '${windowId}')">
+                    <div class="window-title">
+                        <i class="fas fa-${getWindowIcon(windowId)}"></i>
+                        ${title}
+                    </div>
+                    <div class="window-controls">
+                        <button onclick="minimizeWindow('${windowId}')"><i class="fas fa-minus"></i></button>
+                        <button onclick="toggleMaximizeWindow('${windowId}')"><i class="fas fa-square"></i></button>
+                        <button onclick="closeWindow('${windowId}')" class="close"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="window-content">
+                    <iframe src="${url}" frameborder="0"></iframe>
+                </div>
+            `;
+            
+            // 設定初始位置（每個窗口錯開一點）
+            const offset = openWindows.length * 30;
+            newWindow.style.top = (80 + offset) + 'px';
+            newWindow.style.left = (120 + offset) + 'px';
+            
+            container.appendChild(newWindow);
+            
+            return newWindow;
+        }
+
+        function getWindowIcon(windowId) {
+            const icons = {
+                'filemanager': 'folder',
+                'settings': 'cog',
+                'about': 'info-circle'
+            };
+            return icons[windowId] || 'window';
+        }
+
+        function bringWindowToFront(window) {
+            window.style.zIndex = ++windowZIndex;
+            
+            // 移除其他窗口的active狀態
+            document.querySelectorAll('.window.active').forEach(win => {
+                if (win !== window) {
+                    win.classList.remove('active');
+                }
+            });
+            
+            window.classList.add('active');
+        }
+
+        function minimizeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            if (window) {
+                window.classList.remove('active');
+                window.classList.add('minimized');
+                updateTaskbarButtons();
+            }
+        }
+
+        function toggleMaximizeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            if (window) {
+                window.classList.toggle('maximized');
+                
+                // 更新最大化按钮圖示
+                const maximizeBtn = window.querySelector('.window-controls button:nth-child(2) i');
+                if (window.classList.contains('maximized')) {
+                    maximizeBtn.className = 'fas fa-clone';
+                } else {
+                    maximizeBtn.className = 'fas fa-square';
+                }
+            }
+        }
+
+        function closeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            if (window) {
+                window.remove();
+                
+                // 從開啟窗口列表中移除
+                const index = openWindows.indexOf(windowId);
+                if (index > -1) {
+                    openWindows.splice(index, 1);
+                }
+                
+                updateTaskbarButtons();
+            }
+        }
+
+        function updateTaskbarButtons() {
+            document.querySelectorAll('.taskbar-item').forEach(item => {
+                const onclick = item.getAttribute('onclick');
+                if (onclick && onclick.includes('showWindow')) {
+                    const windowId = onclick.match(/'([^']+)'/)[1];
+                    const window = document.getElementById(windowId);
+                    
+                    if (window) {
+                        if (window.classList.contains('active')) {
+                            item.classList.add('active');
+                        } else {
+                            item.classList.remove('active');
+                            if (window.classList.contains('minimized')) {
+                                item.classList.add('minimized');
+                            } else {
+                                item.classList.remove('minimized');
+                            }
+                        }
+                    } else {
+                        item.classList.remove('active', 'minimized');
+                    }
+                }
+            });
+        }
+
+        // 窗口拖曳功能
+        let isDragging = false;
+        let currentWindow = null;
+        let initialMouseX = 0;
+        let initialMouseY = 0;
+        let initialWindowX = 0;
+        let initialWindowY = 0;
+
+        function startDrag(e, windowId) {
+            const window = document.getElementById(windowId);
+            if (window && !window.classList.contains('maximized')) {
+                isDragging = true;
+                currentWindow = window;
+                initialMouseX = e.clientX;
+                initialMouseY = e.clientY;
+                initialWindowX = parseInt(window.style.left) || 120;
+                initialWindowY = parseInt(window.style.top) || 80;
+                
+                bringWindowToFront(window);
+                updateTaskbarButtons();
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDrag);
+                e.preventDefault();
+            }
+        }
+
+        function drag(e) {
+            if (isDragging && currentWindow) {
+                const deltaX = e.clientX - initialMouseX;
+                const deltaY = e.clientY - initialMouseY;
+                
+                currentWindow.style.left = (initialWindowX + deltaX) + 'px';
+                currentWindow.style.top = Math.max(0, initialWindowY + deltaY) + 'px';
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            currentWindow = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // 搜尋功能
+        function initSearch() {
+            const searchInput = document.querySelector('.search-box input');
+            const searchResults = document.createElement('div');
+            searchResults.className = 'search-results';
+            searchResults.style.display = 'none';
+            document.body.appendChild(searchResults);
+
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+                if (query.length > 0) {
+                    performSearch(query);
+                } else {
+                    hideSearchResults();
+                }
+            });
+
+            searchInput.addEventListener('focus', function() {
+                if (this.value.trim().length > 0) {
+                    showSearchResults();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-box') && !e.target.closest('.search-results')) {
+                    hideSearchResults();
+                }
+            });
+        }
+
+        function performSearch(query) {
+            // 模擬搜尋結果
+            const results = [
+                { name: '檔案管理員', type: 'app', action: () => showWindow('filemanager') },
+                { name: '設定', type: 'app', action: () => showWindow('settings') },
+                { name: '關於', type: 'app', action: () => showWindow('about') }
+            ].filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
+
+            displaySearchResults(results);
+        }
+
+        function displaySearchResults(results) {
+            const searchResults = document.querySelector('.search-results');
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="search-no-results">找不到相關結果</div>';
+            } else {
+                searchResults.innerHTML = results.map(result => `
+                    <div class="search-result-item" onclick="executeSearchAction('${result.name}')">
+                        <i class="fas fa-${result.type === 'app' ? 'rocket' : 'file'}"></i>
+                        <span>${result.name}</span>
+                    </div>
+                `).join('');
+            }
+            
+            showSearchResults();
+        }
+
+        function executeSearchAction(itemName) {
+            switch(itemName) {
+                case '檔案管理員':
+                    showWindow('filemanager');
+                    break;
+                case '設定':
+                    showWindow('settings');
+                    break;
+                case '關於':
+                    showWindow('about');
+                    break;
+            }
+            hideSearchResults();
+            document.querySelector('.search-box input').value = '';
+        }
+
+        function showSearchResults() {
+            const searchResults = document.querySelector('.search-results');
+            const searchBox = document.querySelector('.search-box');
+            const rect = searchBox.getBoundingClientRect();
+            
+            searchResults.style.display = 'block';
+            searchResults.style.top = (rect.bottom + 5) + 'px';
+            searchResults.style.left = rect.left + 'px';
+            searchResults.style.width = rect.width + 'px';
+        }
+
+        function hideSearchResults() {
+            document.querySelector('.search-results').style.display = 'none';
+        }
+
+        // 點擊窗口時置頂
+        document.addEventListener('click', function(e) {
+            const window = e.target.closest('.window');
+            if (window && !window.classList.contains('minimized')) {
+                bringWindowToFront(window);
+                updateTaskbarButtons();
+            }
+        });
+
+        // 登出功能
+        function logout() {
+            if (confirm('確定要登出嗎？')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // 桌面圖示拖曳功能
+let draggedIcon = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+function initializeDesktopIcons() {
+    const icons = document.querySelectorAll('.desktop-icon');
+    
+    icons.forEach(icon => {
+        // 點擊選中
+        icon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectDesktopIcon(icon);
+        });
+
+        // 雙擊打開
+        icon.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            const appName = icon.getAttribute('data-app');
+            if (appName) {
+                openDesktopApp(appName);
+            }
+        });
+
+        // 拖動開始
+        icon.addEventListener('dragstart', (e) => {
+            draggedIcon = icon;
+            const rect = icon.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            icon.classList.add('dragging');
+        });
+
+        // 拖動結束
+        icon.addEventListener('dragend', (e) => {
+            e.preventDefault();
+            icon.classList.remove('dragging');
+            
+            // 計算新位置
+            const x = e.clientX - dragOffsetX;
+            const y = e.clientY - dragOffsetY;
+            
+            // 設置新位置
+            icon.style.position = 'absolute';
+            icon.style.left = x + 'px';
+            icon.style.top = y + 'px';
+            
+            draggedIcon = null;
+        });
+    });
+
+    // 點擊桌面背景取消選中
+    document.querySelector('.desktop-background').addEventListener('click', (e) => {
+        if (e.target.classList.contains('desktop-background')) {
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.classList.remove('selected');
+            });
+        }
+    });
+}
+        
+        // 選擇框功能
+let isSelecting = false;
+let selectionBox = null;
+let startX = 0;
+let startY = 0;
+
+function initializeDesktopSelection() {
+    const desktop = document.querySelector('.desktop-background');
+    
+    // 創建選擇框元素
+    selectionBox = document.createElement('div');
+    selectionBox.className = 'selection-box';
+    selectionBox.style.display = 'none';
+    desktop.appendChild(selectionBox);
+
+    // 滑鼠按下開始選擇
+    desktop.addEventListener('mousedown', (e) => {
+        // 只在直接點擊桌面背景時才開始選擇
+        if (e.target.classList.contains('desktop-background')) {
+            isSelecting = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            selectionBox.style.left = startX + 'px';
+            selectionBox.style.top = startY + 'px';
+            selectionBox.style.width = '0';
+            selectionBox.style.height = '0';
+            selectionBox.style.display = 'block';
+            
+            // 清除其他已選中的圖示
+            if (!e.ctrlKey) {
+                document.querySelectorAll('.desktop-icon').forEach(icon => {
+                    icon.classList.remove('selected');
+                });
+            }
+        }
+    });
+
+    // 滑鼠移動更新選擇框
+    document.addEventListener('mousemove', (e) => {
+        if (!isSelecting) return;
+        
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+        
+        // 計算選擇框的位置和大小
+        const width = Math.abs(currentX - startX);
+        const height = Math.abs(currentY - startY);
+        const left = Math.min(currentX, startX);
+        const top = Math.min(currentY, startY);
+        
+        selectionBox.style.left = left + 'px';
+        selectionBox.style.top = top + 'px';
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
+        
+        // 檢查每個圖示是否在選擇框內
+        const selectionRect = selectionBox.getBoundingClientRect();
+        document.querySelectorAll('.desktop-icon').forEach(icon => {
+            const iconRect = icon.getBoundingClientRect();
+            
+            // 檢查是否有重疊
+            if (!(selectionRect.right < iconRect.left || 
+                selectionRect.left > iconRect.right || 
+                selectionRect.bottom < iconRect.top || 
+                selectionRect.top > iconRect.bottom)) {
+                icon.classList.add('selected');
+            } else if (!e.ctrlKey) {
+                icon.classList.remove('selected');
+            }
+        });
+    });
+
+    // 滑鼠放開結束選擇
+    document.addEventListener('mouseup', () => {
+        if (isSelecting) {
+            isSelecting = false;
+            selectionBox.style.display = 'none';
+        }
+    });
+
+    // 按住 Ctrl 點擊可以多選
+    document.querySelectorAll('.desktop-icon').forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                icon.classList.toggle('selected');
+            } else if (!e.target.closest('.desktop-icon.selected')) {
+                document.querySelectorAll('.desktop-icon').forEach(i => {
+                    if (i !== icon) i.classList.remove('selected');
+                });
+            }
+        });
+    });
+}
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initSearch();
+            initializeDesktopIcons();
+            initializeDesktopSelection();
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

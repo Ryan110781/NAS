@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設定</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            height: 100vh;
+            overflow: auto;
+        }
+        
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .settings-header {
+            margin-bottom: 30px;
+        }
+        
+        .settings-header h1 {
+            font-size: 24px;
+            color: #333;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .settings-header p {
+            color: #666;
+            margin: 0;
+        }
+        
+        .settings-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            flex: 1;
+        }
+        
+        .setting-label h4 {
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .setting-label p {
+            margin: 0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #0078d4;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+        
+        .form-input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 150px;
+        }
+        
+        .form-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            width: 150px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #106ebe;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .system-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #333;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .storage-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .storage-used {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div class="settings-header">
+            <h1>
+                <i class="fas fa-cog"></i>
+                系統設定
+            </h1>
+            <p>管理您的 HNAS 系統設定</p>
+        </div>
+        
+        <!-- 一般設定 -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <i class="fas fa-sliders-h"></i>
+                一般設定
+            </h2>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>系統名稱</h4>
+                    <p>設定您的 NAS 系統顯示名稱</p>
+                </div>
+                <div class="setting-control">
+                    <input type="text" class="form-input" value="HNAS" id="systemName">
+                    <button class="btn btn-primary" onclick="saveSystemName()">儲存</button>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>語言設定</h4>
+                    <p>選擇系統介面語言</p>
+                </div>
+                <div class="setting-control">
+                    <select class="form-select" id="language">
+                        <option value="zh-TW">繁體中文</option>
+                        <option value="zh-CN">简体中文</option>
+                        <option value="en-US">English</option>
+                        <option value="ja-JP">日本語</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>深色模式</h4>
+                    <p>啟用深色主題介面</p>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="darkMode">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系統管理 -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <i class="fas fa-user-cog"></i>
+                系統管理
+            </h2>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>變更密碼</h4>
+                    <p>更新您的登入密碼以提高安全性</p>
+                </div>
+                <div class="setting-control">
+                    <button class="btn btn-secondary" onclick="showChangePasswordModal()">變更密碼</button>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>清理系統快取</h4>
+                    <p>清理暫存檔案以釋放空間</p>
+                </div>
+                <div class="setting-control">
+                    <button class="btn btn-primary" onclick="cleanupSystem()">清理快取</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 儲存設定 -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <i class="fas fa-hdd"></i>
+                儲存管理
+            </h2>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>最大上傳檔案大小</h4>
+                    <p>限制單個檔案的上傳大小</p>
+                </div>
+                <div class="setting-control">
+                    <select class="form-select" id="maxFileSize">
+                        <option value="100">100 MB</option>
+                        <option value="500" selected>500 MB</option>
+                        <option value="1000">1 GB</option>
+                        <option value="2000">2 GB</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>自動清理暫存檔</h4>
+                    <p>定期清理系統暫存檔案</p>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoCleanup" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <h4>儲存空間使用情況</h4>
+                    <p>檢視系統儲存空間狀態</p>
+                </div>
+                <div class="setting-control">
+                    <button class="btn btn-primary" onclick="checkStorage()">檢查</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系統資訊 -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <i class="fas fa-info-circle"></i>
+                系統資訊
+            </h2>
+            
+            <div class="system-info">
+                <div class="info-row">
+                    <span class="info-label">系統版本:</span>
+                    <span class="info-value">HNAS v1.0.0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Python 版本:</span>
+                    <span class="info-value">3.11.0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Flask 版本:</span>
+                    <span class="info-value">2.3.3</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">執行時間:</span>
+                    <span class="info-value" id="uptime">載入中...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">儲存使用量:</span>
+                    <span class="info-value" id="storageInfo">載入中...</span>
+                </div>
+                <div class="storage-bar">
+                    <div class="storage-used" id="storageBar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系統操作 -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <i class="fas fa-tools"></i>
+                系統操作
+            </h2>
+            
+        </div>
+    </div>
+    
+    <!-- 變更密碼模態框 -->
+    <div id="changePasswordModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>變更密碼</h3>
+                <button class="modal-close" onclick="hideChangePasswordModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="currentPassword">目前密碼</label>
+                    <input type="password" id="currentPassword" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">新密碼</label>
+                    <input type="password" id="newPassword" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">確認新密碼</label>
+                    <input type="password" id="confirmPassword" class="form-input" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideChangePasswordModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitPasswordChange()">確認變更</button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            padding: 20px 24px 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .modal-body {
+            padding: 20px 24px;
+        }
+        
+        .modal-body .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .modal-body .form-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .modal-body label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .modal-body .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .modal-body .form-input:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+        
+        .modal-footer {
+            padding: 12px 24px 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+    </style>
+    
+    <script>
+        let currentSettings = {};
+        
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            loadSystemInfo();
+            setInterval(loadSystemInfo, 30000); // 每30秒更新系統資訊
+        });
+        
+        // 載入設定
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                if (response.ok) {
+                    currentSettings = await response.json();
+                    applySettings();
+                } else {
+                    console.error('載入設定失敗');
+                }
+            } catch (error) {
+                console.error('載入設定錯誤:', error);
+            }
+        }
+        
+        // 應用設定到界面
+        function applySettings() {
+            document.getElementById('systemName').value = currentSettings.system_name || 'HNAS';
+            document.getElementById('language').value = currentSettings.language || 'zh-TW';
+            document.getElementById('darkMode').checked = currentSettings.dark_mode || false;
+            document.getElementById('maxFileSize').value = currentSettings.max_file_size || 500;
+            document.getElementById('autoCleanup').checked = currentSettings.auto_cleanup !== false;
+        }
+        
+        // 載入系統資訊
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/api/system_info');
+                if (response.ok) {
+                    const info = await response.json();
+                    document.getElementById('uptime').textContent = info.uptime;
+                    
+                    const storage = info.storage;
+                    document.getElementById('storageInfo').textContent = 
+                        `${storage.used_gb} GB / ${storage.total_gb} GB (${storage.usage_percent}%)`;
+                    document.getElementById('storageBar').style.width = `${storage.usage_percent}%`;
+                } else {
+                    console.error('載入系統資訊失敗');
+                }
+            } catch (error) {
+                console.error('載入系統資訊錯誤:', error);
+            }
+        }
+        
+        // 儲存系統名稱
+        async function saveSystemName() {
+            const systemName = document.getElementById('systemName').value;
+            if (systemName.trim()) {
+                currentSettings.system_name = systemName.trim();
+                await saveSettings();
+            } else {
+                alert('請輸入有效的系統名稱');
+            }
+        }
+        
+        // 儲存所有設定
+        async function saveSettings() {
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentSettings)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('設定已儲存', 'success');
+                } else {
+                    showNotification('儲存設定失敗', 'error');
+                }
+            } catch (error) {
+                console.error('儲存設定錯誤:', error);
+                showNotification('儲存設定時發生錯誤', 'error');
+            }
+        }
+        
+        // 顯示變更密碼對話框
+        function showChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'flex';
+            document.getElementById('currentPassword').focus();
+        }
+        
+        // 隱藏變更密碼對話框
+        function hideChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+        
+        // 提交密碼變更
+        async function submitPasswordChange() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('請填寫所有欄位');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('新密碼確認不一致');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('新密碼長度至少需要6個字元');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    hideChangePasswordModal();
+                    showNotification('密碼已成功變更', 'success');
+                } else {
+                    alert(result.error || '密碼變更失敗');
+                }
+            } catch (error) {
+                console.error('變更密碼錯誤:', error);
+                alert('變更密碼時發生錯誤');
+            }
+        }
+        
+        // 清理系統快取
+        function cleanupSystem() {
+            showNotification('系統快取清理完成', 'success');
+        }
+        
+        // 檢查儲存空間
+        function checkStorage() {
+            loadSystemInfo();
+            showNotification('儲存空間資訊已更新', 'info');
+        }
+        
+        // 重新載入設定
+        function reloadSettings() {
+            loadSettings();
+            showNotification('設定已重新載入', 'info');
+        }
+        
+        // 匯出設定
+        function exportSettings() {
+            const blob = new Blob([JSON.stringify(currentSettings, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hnas-settings-' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('設定檔已匯出', 'success');
+        }
+        
+        // 恢復預設設定
+        function resetToDefaults() {
+            if (confirm('確定要將所有設定恢復為預設值嗎？\n\n此操作無法復原！')) {
+                currentSettings = {
+                    system_name: 'HNAS',
+                    language: 'zh-TW',
+                    dark_mode: false,
+                    max_file_size: 500,
+                    auto_cleanup: true
+                };
+                applySettings();
+                saveSettings();
+                showNotification('已恢復預設設定', 'info');
+            }
+        }
+        
+        // 監聽設定變化
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('#language')) {
+                currentSettings.language = e.target.value;
+                saveSettings();
+            } else if (e.target.matches('#darkMode')) {
+                currentSettings.dark_mode = e.target.checked;
+                saveSettings();
+            } else if (e.target.matches('#maxFileSize')) {
+                currentSettings.max_file_size = parseInt(e.target.value);
+                saveSettings();
+            } else if (e.target.matches('#autoCleanup')) {
+                currentSettings.auto_cleanup = e.target.checked;
+                saveSettings();
+            }
+        });
+        
+        // 通知函數
+        function showNotification(message, type = 'info') {
+            // 移除現有通知
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${colors[type] || colors.info};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 1001;
+                font-size: 14px;
+                font-weight: 500;
+                opacity: 0;
+                transform: translateX(100px);
+                transition: all 0.3s ease;
+            `;
+            
+            if (type === 'warning') {
+                notification.style.color = '#000';
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateX(0)';
+            }, 10);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
