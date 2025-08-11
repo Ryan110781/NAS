@@ -40,7 +40,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mp3', '
                      'bmp', 'webp', 'svg', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'wav', 'flac', 
                      'aac', 'ogg', 'wma', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx', '7z', 'tar', 
                      'gz', 'bz2', 'html', 'css', 'js', 'py', 'java', 'cpp', 'c', 'php'}
-MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB
+MAX_CONTENT_LENGTH = 2 * 1024 * 1024 * 1024  # 500MB
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH

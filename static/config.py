@@ -1,4 +1,4 @@
-# HNAS Configuration File
+# NAS Configuration File
 import os
 
 class Config:
@@ -7,7 +7,7 @@ class Config:
     
     # 檔案上傳設定
     UPLOAD_FOLDER = 'data'
-    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB
+    MAX_CONTENT_LENGTH = 2 * 1024 * 1024 * 1024  # 2GB
     ALLOWED_EXTENSIONS = {
         'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp',
         'mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm',
@@ -19,7 +19,7 @@ class Config:
     
     # 系統設定
     SYSTEM_NAME = 'NAS'
-    SYSTEM_VERSION = '2.2.1'
+    SYSTEM_VERSION = '1.0.0'
     DEFAULT_LANGUAGE = 'zh-TW'
     
     # 安全設定
@@ -29,7 +29,7 @@ class Config:
     
     # 日誌設定
     LOG_LEVEL = 'INFO'
-    LOG_FILE = 'logs/hnas.log'
+    LOG_FILE = 'logs/nas.log'
     LOG_MAX_SIZE = 10 * 1024 * 1024  # 10MB
     LOG_BACKUP_COUNT = 5
     
